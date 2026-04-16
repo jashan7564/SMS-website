@@ -2,6 +2,9 @@ import './config/env.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
 import authRoutes from './routes/authRoutes.js';
 import smsRoutes from './routes/smsRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
@@ -36,6 +39,21 @@ app.use((err, _req, res, _next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Internal server error' });
 });
+
+// ── Railway: serve built React client ──────────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const clientDist = join(__dirname, '..', '..', '..', 'client', 'dist');
+
+if (existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  // SPA fallback — let React Router handle all non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(join(clientDist, 'index.html'));
+  });
+  console.log('📦 Serving React client from', clientDist);
+}
+// ───────────────────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
